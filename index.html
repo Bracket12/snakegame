@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 1px solid #000;
+            background-color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="snakeGame" width="500" height="500"></canvas>
+    <script>
+        const canvas = document.getElementById('snakeGame');
+        const ctx = canvas.getContext('2d');
+        const box = 20;
+        const canvasSize = 25;
+
+        let snake, direction, food, score, specialFood, specialFoodTimer, game;
+
+        function initializeGame() {
+            snake = [{ x: 5 * box, y: 5 * box }];
+            direction = 'RIGHT';
+            food = generateFood();
+            score = 0;
+            specialFood = null;
+            specialFoodTimer = null;
+            clearInterval(game);
+            game = setInterval(draw, 100);
+        }
+
+        function changeDirection(event) {
+            const key = event.key;
+            if (key === 'w' && direction !== 'DOWN') direction = 'UP';
+            else if (key === 's' && direction !== 'UP') direction = 'DOWN';
+            else if (key === 'a' && direction !== 'RIGHT') direction = 'LEFT';
+            else if (key === 'd' && direction !== 'LEFT') direction = 'RIGHT';
+        }
+
+        function generateFood() {
+            return {
+                x: Math.floor(Math.random() * canvasSize) * box,
+                y: Math.floor(Math.random() * canvasSize) * box
+            };
+        }
+
+        function drawSnakePart(part) {
+            const gradient = ctx.createLinearGradient(part.x, part.y, part.x + box, part.y + box);
+            gradient.addColorStop(0, 'lightgreen');
+            gradient.addColorStop(1, 'green');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(part.x, part.y, box, box);
+            ctx.strokeStyle = 'darkgreen';
+            ctx.strokeRect(part.x, part.y, box, box);
+        }
+
+        function drawFood() {
+            ctx.fillStyle = 'red';
+            ctx.shadowColor = 'rgba(255, 0, 0, 0.5)';
+            ctx.shadowBlur = 10;
+            ctx.fillRect(food.x, food.y, box, box);
+            ctx.shadowColor = 'transparent'; // Reset shadow
+        }
+
+        function drawSpecialFood() {
+            ctx.fillStyle = 'gold';
+            ctx.shadowColor = 'rgba(255, 215, 0, 0.5)';
+            ctx.shadowBlur = 10;
+            ctx.fillRect(specialFood.x, specialFood.y, box, box);
+            ctx.shadowColor = 'transparent'; // Reset shadow
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < snake.length; i++) {
+                drawSnakePart(snake[i]);
+            }
+
+            drawFood();
+
+            if (specialFood) {
+                drawSpecialFood();
+            }
+
+            ctx.fillStyle = 'black';
+            ctx.font = '20px Arial';
+            ctx.fillText('Score: ' + score, box, box);
+
+            let snakeX = snake[0].x;
+            let snakeY = snake[0].y;
+
+            if (direction === 'UP') snakeY -= box;
+            if (direction === 'DOWN') snakeY += box;
+            if (direction === 'LEFT') snakeX -= box;
+            if (direction === 'RIGHT') snakeX += box;
+
+            // Wrap around the edges
+            if (snakeX >= canvas.width) snakeX = 0;
+            if (snakeX < 0) snakeX = canvas.width - box;
+            if (snakeY >= canvas.height) snakeY = 0;
+            if (snakeY < 0) snakeY = canvas.height - box;
+
+            if (snakeX === food.x && snakeY === food.y) {
+                score++;
+                food = generateFood();
+
+                // Generate special food after every 5th score
+                if (score % 5 === 0) {
+                    specialFood = generateFood();
+                    specialFoodTimer = setTimeout(() => {
+                        specialFood = null; // Remove special food after 15 seconds
+                    }, 15000); // 15 seconds
+                }
+            } else {
+                snake.pop();
+            }
+
+            const newHead = { x: snakeX, y: snakeY };
+
+            if (specialFood && snakeX === specialFood.x && snakeY === specialFood.y) {
+                score += 5; // Add 5 points for special food
+                specialFood = null; // Consume special food
+                clearTimeout(specialFoodTimer); // Clear the timer
+            }
+
+            if (collision(newHead, snake)) {
+                clearInterval(game);
+                if (confirm('Game Over! Your score: ' + score + '. Do you want to play again?')) {
+                    initializeGame();
+                }
+            }
+
+            snake.unshift(newHead);
+        }
+
+        function collision(head, array) {
+            for (let i = 1; i < array.length; i++) { // Start from 1 to prevent collision with itself
+                if (head.x === array[i].x && head.y === array[i].y) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        document.addEventListener('keydown', changeDirection);
+        initializeGame(); // Start the game for the first time
+    </script>
+</body>
+</html>
